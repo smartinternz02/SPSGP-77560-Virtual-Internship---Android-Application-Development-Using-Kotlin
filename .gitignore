@@ -1,0 +1,1299 @@
+*.iml
+.gradle
+/local.properties
+/.idea/caches
+/.idea/libraries
+/.idea/modules.xml
+/.idea/workspace.xml
+/.idea/navEditor.xml
+/.idea/assetWizardSettings.xml
+.DS_Store
+/build
+/captures
+.externalNativeBuild
+.cxx
+/build
+apply plugin: 'com.android.application'
+
+apply plugin: 'kotlin-android'
+
+apply plugin: 'kotlin-android-extensions'
+
+apply plugin: "kotlin-kapt"
+
+android {
+    compileSdkVersion 29
+    buildToolsVersion "29.0.2"
+    defaultConfig {
+        applicationId "com.androiddevs.grocerylist"
+        minSdkVersion 16
+        targetSdkVersion 29
+        versionCode 1
+        versionName "1.0"
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+    }
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+    }
+    compileOptions {
+        sourceCompatibility = 1.8
+        targetCompatibility = 1.8
+    }
+    kotlinOptions {
+        jvmTarget = "1.8"
+    }
+}
+
+dependencies {
+
+    implementation fileTree(dir: 'libs', include: ['*.jar'])
+    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
+    implementation 'androidx.appcompat:appcompat:1.1.0'
+    implementation 'androidx.core:core-ktx:1.1.0'
+    implementation 'androidx.constraintlayout:constraintlayout:1.1.3'
+    testImplementation 'junit:junit:4.12'
+    androidTestImplementation 'androidx.test.ext:junit:1.1.1'
+    androidTestImplementation 'androidx.test.espresso:espresso-core:3.2.0'
+
+    def room_version = "2.2.1"
+    def kodein_version = "6.4.0"
+    def lifecycle_version = "2.0.0"
+
+    // Room and Architectural Components
+    implementation "androidx.room:room-runtime:$room_version"
+    implementation "androidx.legacy:legacy-support-v4:1.0.0"
+    implementation 'androidx.lifecycle:lifecycle-extensions:2.1.0'
+    implementation 'androidx.lifecycle:lifecycle-viewmodel-ktx:2.1.0'
+    implementation "androidx.room:room-ktx:2.2.1"
+    kapt "androidx.room:room-compiler:$room_version"
+
+    // Coroutines
+    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-core:1.3.0'
+    implementation "org.jetbrains.kotlinx:kotlinx-coroutines-android:1.3.0"
+
+    // New Material Design
+    implementation "com.google.android.material:material:1.0.0"
+
+    // ViewModel
+    implementation "androidx.lifecycle:lifecycle-extensions:$lifecycle_version"
+    implementation "androidx.lifecycle:lifecycle-viewmodel-ktx:$lifecycle_version"
+    kapt "androidx.lifecycle:lifecycle-compiler:$lifecycle_version"
+
+    // Kodein
+    implementation "org.kodein.di:kodein-di-generic-jvm:$kodein_version"
+    implementation "org.kodein.di:kodein-di-framework-android-x:$kodein_version"
+}
+@@ -0,0 +1,21 @@
+# Add project specific ProGuard rules here.
+# You can control the set of applied configuration files using the
+# proguardFiles setting in build.gradle.
+#
+# For more details, see
+#   http://developer.android.com/guide/developing/tools/proguard.html
+
+# If your project uses WebView with JS, uncomment the following
+# and specify the fully qualified class name to the JavaScript interface
+# class:
+#-keepclassmembers class fqcn.of.javascript.interface.for.webview {
+#   public *;
+#}
+
+# Uncomment this to preserve the line number information for
+# debugging stack traces.
+#-keepattributes SourceFile,LineNumberTable
+
+# If you keep the line number information, uncomment this to
+# hide the original source file name.
+#-renamesourcefileattribute SourceFile
+@@ -0,0 +1,24 @@
+package com.abhi.grocerylist
+
+import androidx.test.platform.app.InstrumentationRegistry
+import androidx.test.ext.junit.runners.AndroidJUnit4
+
+import org.junit.Test
+import org.junit.runner.RunWith
+
+import org.junit.Assert.*
+
+/**
+ * Instrumented test, which will execute on an Android device.
+ *
+ * See [testing documentation](http://d.android.com/tools/testing).
+ */
+@RunWith(AndroidJUnit4::class)
+class ExampleInstrumentedTest {
+    @Test
+    fun useAppContext() {
+        // Context of the app under test.
+        val appContext = InstrumentationRegistry.getInstrumentation().targetContext
+        assertEquals("com.androiddevs.grocerylist", appContext.packageName)
+    }
+}
+@@ -0,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    package="com.abhi.grocerylist">
+
+    <application
+        android:allowBackup="true"
+        android:icon="@drawable/icon"
+        android:label="@string/app_name"
+        android:roundIcon="@drawable/icon"
+        android:supportsRtl="true"
+        android:theme="@style/AppTheme"
+        tools:ignore="GoogleAppIndexingWarning"
+        android:name="com.abhi.grocerylist.ShoppingApplication">
+        <activity android:name="com.abhi.grocerylist.ui.shoppinglist.ShoppingActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+    </application>
+
+</manifest>
+@@ -0,0 +1,31 @@
+package com.abhi.grocerylist
+
+import android.app.Application
+import com.abhi.grocerylist.data.db.ShoppingDatabase
+import com.abhi.grocerylist.data.repositories.ShoppingRepository
+import com.abhi.grocerylist.ui.shoppinglist.ShoppingViewModelFactory
+import org.kodein.di.Kodein
+import org.kodein.di.KodeinAware
+import org.kodein.di.android.x.androidXModule
+import org.kodein.di.generic.bind
+import org.kodein.di.generic.instance
+import org.kodein.di.generic.provider
+import org.kodein.di.generic.singleton
+
+class ShoppingApplication: Application(), KodeinAware {
+
+    override val kodein: Kodein = Kodein.lazy {
+        import(androidXModule(this@ShoppingApplication))
+        bind() from this.singleton<Any?, ShoppingDatabase> { ShoppingDatabase(this.instance()) }
+        bind() from this.singleton {
+            ShoppingRepository(
+                this.instance()
+            )
+        }
+        bind() from this.provider {
+            ShoppingViewModelFactory(
+                this.instance()
+            )
+        }
+    }
+}
+@@ -0,0 +1,18 @@
+package com.abhi.grocerylist.data.db
+
+import androidx.lifecycle.LiveData
+import androidx.room.*
+import com.abhi.grocerylist.data.db.entities.ShoppingItem
+
+@Dao
+interface ShoppingDao {
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsert(item: ShoppingItem)
+
+    @Delete
+    suspend fun delete(item: ShoppingItem)
+
+    @Query("SELECT * FROM shopping_items")
+    fun getAllShoppingItems(): LiveData<List<ShoppingItem>>
+}
+@@ -0,0 +1,34 @@
+package com.abhi.grocerylist.data.db
+
+import android.content.Context
+import androidx.room.Database
+import androidx.room.Room
+import androidx.room.RoomDatabase
+import com.abhi.grocerylist.data.db.entities.ShoppingItem
+
+@Database(
+    entities = [ShoppingItem::class],
+    version = 1
+)
+abstract class ShoppingDatabase: RoomDatabase() {
+
+    abstract fun getShoppingDao(): ShoppingDao
+
+    companion object {
+        @Volatile
+        private var instance: ShoppingDatabase? = null
+        private val LOCK = Any()
+
+        operator fun invoke(context: Context) = instance
+            ?: synchronized(LOCK) {
+            instance
+                ?: createDatabase(
+                    context
+                ).also { instance = it }
+        }
+
+        private fun createDatabase(context: Context) =
+            Room.databaseBuilder(context.applicationContext,
+                ShoppingDatabase::class.java, "ShoppingDB.db").build()
+    }
+}
+@@ -0,0 +1,16 @@
+package com.abhi.grocerylist.data.db.entities
+
+import androidx.room.ColumnInfo
+import androidx.room.Entity
+import androidx.room.PrimaryKey
+
+@Entity(tableName = "shopping_items")
+data class ShoppingItem(
+    @ColumnInfo(name = "item_name")
+    var name: String,
+    @ColumnInfo(name = "item_amount")
+    var amount: Int
+) {
+    @PrimaryKey(autoGenerate = true)
+    var id: Int? = null
+}
+@@ -0,0 +1,14 @@
+package com.abhi.grocerylist.data.repositories
+
+import com.abhi.grocerylist.data.db.entities.ShoppingItem
+import com.abhi.grocerylist.data.db.ShoppingDatabase
+
+class ShoppingRepository(
+    private val db: ShoppingDatabase
+) {
+    suspend fun upsert(item: ShoppingItem) = db.getShoppingDao().upsert(item)
+
+    suspend fun delete(item: ShoppingItem) = db.getShoppingDao().delete(item)
+
+    fun getAllShoppingItems() = db.getShoppingDao().getAllShoppingItems()
+}
+@@ -0,0 +1,50 @@
+package com.abhi.grocerylist.other
+
+import android.view.LayoutInflater
+import android.view.View
+import android.view.ViewGroup
+import androidx.recyclerview.widget.RecyclerView
+import com.abhi.grocerylist.R
+import com.abhi.grocerylist.data.db.entities.ShoppingItem
+import com.abhi.grocerylist.ui.shoppinglist.ShoppingViewModel
+import kotlinx.android.synthetic.main.shopping_item.view.*
+
+class ShoppingItemAdapter(
+    var items: List<ShoppingItem>,
+    private val viewModel: ShoppingViewModel
+): RecyclerView.Adapter<ShoppingItemAdapter.ShoppingViewHolder>() {
+
+    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ShoppingViewHolder {
+        val view = LayoutInflater.from(parent.context).inflate(R.layout.shopping_item, parent, false)
+        return ShoppingViewHolder(view)
+    }
+
+    override fun getItemCount(): Int {
+        return items.size
+    }
+
+    override fun onBindViewHolder(holder: ShoppingViewHolder, position: Int) {
+        val curShoppingItem = items[position]
+
+        holder.itemView.tvName.text = curShoppingItem.name
+        holder.itemView.tvAmount.text = "${curShoppingItem.amount}"
+
+        holder.itemView.ivDelete.setOnClickListener {
+            viewModel.delete(curShoppingItem)
+        }
+
+        holder.itemView.ivPlus.setOnClickListener {
+            curShoppingItem.amount++
+            viewModel.upsert(curShoppingItem)
+        }
+
+        holder.itemView.ivMinus.setOnClickListener {
+            if(curShoppingItem.amount > 0) {
+                curShoppingItem.amount--
+                viewModel.upsert(curShoppingItem)
+            }
+        }
+    }
+
+    inner class ShoppingViewHolder(itemView: View): RecyclerView.ViewHolder(itemView)
+}
+@@ -0,0 +1,7 @@
+package com.abhi.grocerylist.ui.shoppinglist
+
+import com.abhi.grocerylist.data.db.entities.ShoppingItem
+
+interface AddDialogListener {
+    fun onAddButtonClicked(item: ShoppingItem)
+}
+@@ -0,0 +1,37 @@
+package com.abhi.grocerylist.ui.shoppinglist
+
+import android.content.Context
+import android.os.Bundle
+import android.view.Window
+import android.widget.Toast
+import androidx.appcompat.app.AppCompatDialog
+import com.abhi.grocerylist.R
+import com.abhi.grocerylist.data.db.entities.ShoppingItem
+import kotlinx.android.synthetic.main.dialog_add_shopping_item.*
+
+class AddShoppingItemDialog(context: Context, var addDialogListener: AddDialogListener) :
+    AppCompatDialog(context) {
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        supportRequestWindowFeature(Window.FEATURE_NO_TITLE)
+        setContentView(R.layout.dialog_add_shopping_item)
+
+        tvAdd.setOnClickListener {
+            val name = etName.text.toString()
+            val amount = etAmount.text.toString().toInt()
+            if(name.isNullOrEmpty()) {
+                Toast.makeText(context, "Please enter a name", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
+
+            val item = ShoppingItem(name, amount)
+            addDialogListener.onAddButtonClicked(item)
+            dismiss()
+        }
+
+        tvCancel.setOnClickListener {
+            cancel()
+        }
+    }
+}
+package com.abhi.grocerylist.ui.shoppinglist
+
+import android.os.Bundle
+import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.Observer
+import androidx.lifecycle.ViewModelProvider
+import androidx.recyclerview.widget.LinearLayoutManager
+import com.abhi.grocerylist.R
+import com.abhi.grocerylist.other.ShoppingItemAdapter
+import com.abhi.grocerylist.data.db.entities.ShoppingItem
+import kotlinx.android.synthetic.main.activity_shopping.*
+import org.kodein.di.KodeinAware
+import org.kodein.di.android.kodein
+import org.kodein.di.generic.instance
+
+class ShoppingActivity : AppCompatActivity(), KodeinAware {
+
+    override val kodein by kodein()
+    private val factory: ShoppingViewModelFactory by instance()
+
+    lateinit var viewModel: ShoppingViewModel
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setContentView(R.layout.activity_shopping)
+
+        viewModel = ViewModelProvider(this, factory).get(ShoppingViewModel::class.java)
+
+        val adapter = ShoppingItemAdapter(listOf(), viewModel)
+
+        rvShoppingItems.layoutManager = LinearLayoutManager(this)
+        rvShoppingItems.adapter = adapter
+
+        viewModel.getAllShoppingItems().observe(this, Observer {
+            adapter.items = it
+            adapter.notifyDataSetChanged()
+        })
+
+        fab.setOnClickListener {
+            AddShoppingItemDialog(
+                this,
+                object : AddDialogListener {
+                    override fun onAddButtonClicked(item: ShoppingItem) {
+                        viewModel.upsert(item)
+                    }
+                }).show()
+        }
+    }
+
+}
+@@ -0,0 +1,24 @@
+package com.abhi.grocerylist.ui.shoppinglist
+
+import androidx.lifecycle.ViewModel
+import com.abhi.grocerylist.data.db.entities.ShoppingItem
+import com.abhi.grocerylist.data.repositories.ShoppingRepository
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
+
+class ShoppingViewModel(
+    private val repository: ShoppingRepository
+) : ViewModel() {
+
+    fun upsert(item: ShoppingItem) =
+        GlobalScope.launch {
+            repository.upsert(item)
+        }
+
+    fun delete(item: ShoppingItem) = GlobalScope.launch {
+        repository.delete(item)
+    }
+
+    fun getAllShoppingItems() = repository.getAllShoppingItems()
+
+}
+@@ -0,0 +1,15 @@
+package com.abhi.grocerylist.ui.shoppinglist
+
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
+import com.abhi.grocerylist.data.repositories.ShoppingRepository
+
+@Suppress("UNCHECKED_CAST")
+class ShoppingViewModelFactory(
+    private val repository: ShoppingRepository
+) : ViewModelProvider.NewInstanceFactory() {
+
+    override fun <T : ViewModel?> create(modelClass: Class<T>): T {
+        return ShoppingViewModel(repository) as T
+    }
+}
+@@ -0,0 +1,11 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24"
+    android:tint="#FFFFFF"
+    android:alpha="0.8">
+    <path
+        android:fillColor="#FF000000"
+        android:pathData="M19,13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
+</vector>
+@@ -0,0 +1,11 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24"
+    android:tint="#FFFFFF"
+    android:alpha="0.8">
+    <path
+        android:fillColor="#FF000000"
+        android:pathData="M6,19c0,1.1 0.9,2 2,2h8c1.1,0 2,-0.9 2,-2V7H6v12zM19,4h-3.5l-1,-1h-5l-1,1H5v2h14V4z"/>
+</vector>
+@@ -0,0 +1,11 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24"
+    android:tint="#FFFFFF"
+    android:alpha="0.8">
+    <path
+        android:fillColor="#FF000000"
+        android:pathData="M3,17.25V21h3.75L17.81,9.94l-3.75,-3.75L3,17.25zM20.71,7.04c0.39,-0.39 0.39,-1.02 0,-1.41l-2.34,-2.34c-0.39,-0.39 -1.02,-0.39 -1.41,0l-1.83,1.83 3.75,3.75 1.83,-1.83z"/>
+</vector>
+@@ -0,0 +1,11 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24"
+    android:tint="#FFFFFF"
+    android:alpha="0.8">
+    <path
+        android:fillColor="#FF000000"
+        android:pathData="M12,2C6.48,2 2,6.48 2,12s4.48,10 10,10 10,-4.48 10,-10S17.52,2 12,2zM17,13L7,13v-2h10v2z"/>
+</vector>
+@@ -0,0 +1,11 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24"
+    android:tint="#FFFFFF"
+    android:alpha="0.8">
+    <path
+        android:fillColor="#FF000000"
+        android:pathData="M12,2C6.48,2 2,6.48 2,12s4.48,10 10,10 10,-4.48 10,-10S17.52,2 12,2zM17,13h-4v4h-2v-4L7,13v-2h4L11,7h2v4h4v2z"/>
+</vector>
+@@ -0,0 +1,34 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:fillType="evenOdd"
+        android:pathData="M32,64C32,64 38.39,52.99 44.13,50.95C51.37,48.37 70.14,49.57 70.14,49.57L108.26,87.69L108,109.01L75.97,107.97L32,64Z"
+        android:strokeWidth="1"
+        android:strokeColor="#00000000">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:endX="78.5885"
+                android:endY="90.9159"
+                android:startX="48.7653"
+                android:startY="61.0927"
+                android:type="linear">
+                <item
+                    android:color="#44000000"
+                    android:offset="0.0" />
+                <item
+                    android:color="#00000000"
+                    android:offset="1.0" />
+            </gradient>
+        </aapt:attr>
+    </path>
+    <path
+        android:fillColor="#FFFFFF"
+        android:fillType="nonZero"
+        android:pathData="M66.94,46.02L66.94,46.02C72.44,50.07 76,56.61 76,64L32,64C32,56.61 35.56,50.11 40.98,46.06L36.18,41.19C35.45,40.45 35.45,39.3 36.18,38.56C36.91,37.81 38.05,37.81 38.78,38.56L44.25,44.05C47.18,42.57 50.48,41.71 54,41.71C57.48,41.71 60.78,42.57 63.68,44.05L69.11,38.56C69.84,37.81 70.98,37.81 71.71,38.56C72.44,39.3 72.44,40.45 71.71,41.19L66.94,46.02ZM62.94,56.92C64.08,56.92 65,56.01 65,54.88C65,53.76 64.08,52.85 62.94,52.85C61.8,52.85 60.88,53.76 60.88,54.88C60.88,56.01 61.8,56.92 62.94,56.92ZM45.06,56.92C46.2,56.92 47.13,56.01 47.13,54.88C47.13,53.76 46.2,52.85 45.06,52.85C43.92,52.85 43,53.76 43,54.88C43,56.01 43.92,56.92 45.06,56.92Z"
+        android:strokeWidth="1"
+        android:strokeColor="#00000000" />
+</vector>
+@@ -0,0 +1,170 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:fillColor="#008577"
+        android:pathData="M0,0h108v108h-108z" />
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M9,0L9,108"
+        android:strokeWidth="0.8"
+        android:strokeColor="#33FFFFFF" />
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M19,0L19,108"
+        android:strokeWidth="0.8"
+        android:strokeColor="#33FFFFFF" />
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M29,0L29,108"
+        android:strokeWidth="0.8"
+        android:strokeColor="#33FFFFFF" />
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M39,0L39,108"
+        android:strokeWidth="0.8"
+        android:strokeColor="#33FFFFFF" />
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M49,0L49,108"
+        android:strokeWidth="0.8"
+        android:strokeColor="#33FFFFFF" />
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M59,0L59,108"
+        android:strokeWidth="0.8"
+        android:strokeColor="#33FFFFFF" />
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M69,0L69,108"
+        android:strokeWidth="0.8"
+        android:strokeColor="#33FFFFFF" />
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M79,0L79,108"
+        android:strokeWidth="0.8"
+        android:strokeColor="#33FFFFFF" />
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M89,0L89,108"
+        android:strokeWidth="0.8"
+        android:strokeColor="#33FFFFFF" />
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M99,0L99,108"
+        android:strokeWidth="0.8"
+        android:strokeColor="#33FFFFFF" />
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M0,9L108,9"
+        android:strokeWidth="0.8"
+        android:strokeColor="#33FFFFFF" />
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M0,19L108,19"
+        android:strokeWidth="0.8"
+        android:strokeColor="#33FFFFFF" />
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M0,29L108,29"
+        android:strokeWidth="0.8"
+        android:strokeColor="#33FFFFFF" />
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M0,39L108,39"
+        android:strokeWidth="0.8"
+        android:strokeColor="#33FFFFFF" />
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M0,49L108,49"
+        android:strokeWidth="0.8"
+        android:strokeColor="#33FFFFFF" />
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M0,59L108,59"
+        android:strokeWidth="0.8"
+        android:strokeColor="#33FFFFFF" />
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M0,69L108,69"
+        android:strokeWidth="0.8"
+        android:strokeColor="#33FFFFFF" />
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M0,79L108,79"
+        android:strokeWidth="0.8"
+        android:strokeColor="#33FFFFFF" />
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M0,89L108,89"
+        android:strokeWidth="0.8"
+        android:strokeColor="#33FFFFFF" />
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M0,99L108,99"
+        android:strokeWidth="0.8"
+        android:strokeColor="#33FFFFFF" />
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M19,29L89,29"
+        android:strokeWidth="0.8"
+        android:strokeColor="#33FFFFFF" />
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M19,39L89,39"
+        android:strokeWidth="0.8"
+        android:strokeColor="#33FFFFFF" />
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M19,49L89,49"
+        android:strokeWidth="0.8"
+        android:strokeColor="#33FFFFFF" />
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M19,59L89,59"
+        android:strokeWidth="0.8"
+        android:strokeColor="#33FFFFFF" />
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M19,69L89,69"
+        android:strokeWidth="0.8"
+        android:strokeColor="#33FFFFFF" />
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M19,79L89,79"
+        android:strokeWidth="0.8"
+        android:strokeColor="#33FFFFFF" />
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M29,19L29,89"
+        android:strokeWidth="0.8"
+        android:strokeColor="#33FFFFFF" />
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M39,19L39,89"
+        android:strokeWidth="0.8"
+        android:strokeColor="#33FFFFFF" />
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M49,19L49,89"
+        android:strokeWidth="0.8"
+        android:strokeColor="#33FFFFFF" />
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M59,19L59,89"
+        android:strokeWidth="0.8"
+        android:strokeColor="#33FFFFFF" />
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M69,19L69,89"
+        android:strokeWidth="0.8"
+        android:strokeColor="#33FFFFFF" />
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M79,19L79,89"
+        android:strokeWidth="0.8"
+        android:strokeColor="#33FFFFFF" />
+</vector>
+@@ -0,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:padding="16dp"
+    android:background="@color/lightergrey2"
+    tools:context=".ui.shoppinglist.ShoppingActivity">
+
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/rvShoppingItems"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintLeft_toLeftOf="parent"
+        app:layout_constraintRight_toRightOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
+        android:id="@+id/fab"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:src="@drawable/ic_add"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>
+@@ -0,0 +1,75 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="300dp"
+    android:layout_height="wrap_content"
+    android:background="@color/lightergrey2"
+    android:orientation="vertical"
+    android:padding="16dp">
+
+    <TextView
+        android:id="@+id/tvTitle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Add a new Shopping Item"
+        android:textColor="@android:color/white"
+        android:textSize="20sp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.5"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <EditText
+        android:id="@+id/etName"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:layout_marginEnd="16dp"
+        android:layout_marginRight="16dp"
+        android:ems="10"
+        android:hint="Name"
+        android:textColorHint="@android:color/white"
+        android:inputType="text"
+        android:textColor="@android:color/white"
+        app:layout_constraintEnd_toStartOf="@+id/etAmount"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/tvTitle" />
+
+    <EditText
+        android:id="@+id/etAmount"
+        android:layout_width="100dp"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:ems="10"
+        android:hint="Amount"
+        android:textColorHint="@android:color/white"
+        android:inputType="number"
+        android:textColor="@android:color/white"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/tvTitle" />
+
+    <TextView
+        android:id="@+id/tvAdd"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:text="ADD"
+        android:textColor="@android:color/white"
+        android:textSize="18sp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/etAmount" />
+
+    <TextView
+        android:id="@+id/tvCancel"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:layout_marginEnd="164dp"
+        android:layout_marginRight="164dp"
+        android:text="CANCEL"
+        android:textColor="@android:color/white"
+        android:textSize="18sp"
+        app:layout_constraintEnd_toStartOf="@+id/tvAdd"
+        app:layout_constraintTop_toBottomOf="@+id/etName" />
+</androidx.constraintlayout.widget.ConstraintLayout>
+@@ -0,0 +1,76 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="@color/lightergrey2"
+    android:orientation="vertical"
+    android:padding="16dp">
+
+
+    <TextView
+        android:id="@+id/tvName"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_weight="9"
+        android:text="Name"
+        android:textColor="@android:color/white"
+        android:textSize="20sp"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+
+    <TextView
+        android:id="@+id/tvAmount"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:text="Amount"
+        android:textColor="@android:color/white"
+        android:textSize="20sp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="@+id/ivMinus"
+        app:layout_constraintTop_toTopOf="parent" />
+
+
+    <ImageView
+        android:id="@+id/ivDelete"
+        android:layout_width="35dp"
+        android:layout_height="35dp"
+        android:layout_marginTop="16dp"
+        android:clickable="true"
+        android:focusable="true"
+        android:src="@drawable/ic_delete"
+        android:textSize="20sp"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/tvName" />
+
+    <ImageView
+        android:id="@+id/ivPlus"
+        android:layout_width="35dp"
+        android:layout_height="35dp"
+        android:layout_marginTop="16dp"
+        android:src="@drawable/ic_plus"
+        android:clickable="true"
+        android:focusable="true"
+        android:textSize="20sp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/tvAmount" />
+
+    <ImageView
+        android:id="@+id/ivMinus"
+        android:layout_width="35dp"
+        android:layout_height="35dp"
+        android:layout_marginTop="16dp"
+        android:layout_marginEnd="16dp"
+        android:layout_marginRight="16dp"
+        android:src="@drawable/ic_minus"
+        android:clickable="true"
+        android:focusable="true"
+        android:textSize="20sp"
+        app:layout_constraintEnd_toStartOf="@+id/ivPlus"
+        app:layout_constraintTop_toBottomOf="@+id/tvAmount" />
+
+
+</androidx.constraintlayout.widget.ConstraintLayout>
+@@ -0,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <item
+        android:id="@+id/miAddShoppingItem"
+        android:title="Add Shopping Item"
+        app:showAsAction="always"
+        android:icon="@drawable/ic_add" />
+
+</menu>
+@@ -0,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+    <background android:drawable="@drawable/ic_launcher_background" />
+    <foreground android:drawable="@drawable/ic_launcher_foreground" />
+</adaptive-icon>
+@@ -0,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+    <background android:drawable="@drawable/ic_launcher_background" />
+    <foreground android:drawable="@drawable/ic_launcher_foreground" />
+</adaptive-icon>
+@@ -0,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="colorPrimary">#A020F0</color>
+    <color name="lightergrey1">#504F4F</color>
+    <color name="lightergrey2">#5A5959</color>
+    <color name="darkergrey1">#3D3C3C</color>
+    <color name="darkergrey2">#333232</color>
+    <color name="colorPrimaryDark">#00574B</color>
+    <color name="colorAccent">#D81B60</color>
+</resources>
+@@ -0,0 +1,3 @@
+<resources>
+    <string name="app_name">GroceryList</string>
+</resources>
+<resources>
+
+    <!-- Base application theme. -->
+    <style name="AppTheme" parent="Theme.AppCompat.Light.DarkActionBar">
+        <!-- Customize your theme here. -->
+        <item name="colorPrimary">@color/colorPrimary</item>
+        <item name="colorPrimaryDark">@color/colorPrimaryDark</item>
+        <item name="colorAccent">@color/colorAccent</item>
+    </style>
+
+</resources>
+@@ -0,0 +1,17 @@
+package com.abhi.grocerylist
+
+import org.junit.Test
+
+import org.junit.Assert.*
+
+/**
+ * Example local unit test, which will execute on the development machine (host).
+ *
+ * See [testing documentation](http://d.android.com/tools/testing).
+ */
+class ExampleUnitTest {
+    @Test
+    fun addition_isCorrect() {
+        assertEquals(4, 2 + 2)
+    }
+}
+@@ -0,0 +1,28 @@
+// Top-level build file where you can add configuration options common to all sub-projects/modules.
+
+buildscript {
+    ext.kotlin_version = '1.3.50'
+    repositories {
+        google()
+        jcenter()
+
+    }
+    dependencies {
+        classpath 'com.android.tools.build:gradle:3.5.2'
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
+        // NOTE: Do not place your application dependencies here; they belong
+        // in the individual module build.gradle files
+    }
+}
+
+allprojects {
+    repositories {
+        google()
+        jcenter()
+
+    }
+}
+
+task clean(type: Delete) {
+    delete rootProject.buildDir
+}
+@@ -0,0 +1,21 @@
+# Project-wide Gradle settings.
+# IDE (e.g. Android Studio) users:
+# Gradle settings configured through the IDE *will override*
+# any settings specified in this file.
+# For more details on how to configure your build environment visit
+# http://www.gradle.org/docs/current/userguide/build_environment.html
+# Specifies the JVM arguments used for the daemon process.
+# The setting is particularly useful for tweaking memory settings.
+org.gradle.jvmargs=-Xmx1536m
+# When configured, Gradle will run in incubating parallel mode.
+# This option should only be used with decoupled projects. More details, visit
+# http://www.gradle.org/docs/current/userguide/multi_project_builds.html#sec:decoupled_projects
+# org.gradle.parallel=true
+# AndroidX package structure to make it clearer which packages are bundled with the
+# Android operating system, and which are packaged with your app's APK
+# https://developer.android.com/topic/libraries/support-library/androidx-rn
+android.useAndroidX=true
+# Automatically convert third-party libraries to use AndroidX
+android.enableJetifier=true
+# Kotlin code style for this project: "official" or "obsolete":
+kotlin.code.style=official
+@@ -0,0 +1,6 @@
+#Tue Nov 12 16:03:59 CET 2019
+distributionBase=GRADLE_USER_HOME
+distributionPath=wrapper/dists
+zipStoreBase=GRADLE_USER_HOME
+zipStorePath=wrapper/dists
+distributionUrl=https\://services.gradle.org/distributions/gradle-5.4.1-all.zip
+@@ -0,0 +1,172 @@
+#!/usr/bin/env sh
+
+##############################################################################
+##
+##  Gradle start up script for UN*X
+##
+##############################################################################
+
+# Attempt to set APP_HOME
+# Resolve links: $0 may be a link
+PRG="$0"
+# Need this for relative symlinks.
+while [ -h "$PRG" ] ; do
+    ls=`ls -ld "$PRG"`
+    link=`expr "$ls" : '.*-> \(.*\)$'`
+    if expr "$link" : '/.*' > /dev/null; then
+        PRG="$link"
+    else
+        PRG=`dirname "$PRG"`"/$link"
+    fi
+done
+SAVED="`pwd`"
+cd "`dirname \"$PRG\"`/" >/dev/null
+APP_HOME="`pwd -P`"
+cd "$SAVED" >/dev/null
+
+APP_NAME="Gradle"
+APP_BASE_NAME=`basename "$0"`
+
+# Add default JVM options here. You can also use JAVA_OPTS and GRADLE_OPTS to pass JVM options to this script.
+DEFAULT_JVM_OPTS=""
+
+# Use the maximum available, or set MAX_FD != -1 to use that value.
+MAX_FD="maximum"
+
+warn () {
+    echo "$*"
+}
+
+die () {
+    echo
+    echo "$*"
+    echo
+    exit 1
+}
+
+# OS specific support (must be 'true' or 'false').
+cygwin=false
+msys=false
+darwin=false
+nonstop=false
+case "`uname`" in
+  CYGWIN* )
+    cygwin=true
+    ;;
+  Darwin* )
+    darwin=true
+    ;;
+  MINGW* )
+    msys=true
+    ;;
+  NONSTOP* )
+    nonstop=true
+    ;;
+esac
+
+CLASSPATH=$APP_HOME/gradle/wrapper/gradle-wrapper.jar
+
+# Determine the Java command to use to start the JVM.
+if [ -n "$JAVA_HOME" ] ; then
+    if [ -x "$JAVA_HOME/jre/sh/java" ] ; then
+        # IBM's JDK on AIX uses strange locations for the executables
+        JAVACMD="$JAVA_HOME/jre/sh/java"
+    else
+        JAVACMD="$JAVA_HOME/bin/java"
+    fi
+    if [ ! -x "$JAVACMD" ] ; then
+        die "ERROR: JAVA_HOME is set to an invalid directory: $JAVA_HOME
+Please set the JAVA_HOME variable in your environment to match the
+location of your Java installation."
+    fi
+else
+    JAVACMD="java"
+    which java >/dev/null 2>&1 || die "ERROR: JAVA_HOME is not set and no 'java' command could be found in your PATH.
+Please set the JAVA_HOME variable in your environment to match the
+location of your Java installation."
+fi
+
+# Increase the maximum file descriptors if we can.
+if [ "$cygwin" = "false" -a "$darwin" = "false" -a "$nonstop" = "false" ] ; then
+    MAX_FD_LIMIT=`ulimit -H -n`
+    if [ $? -eq 0 ] ; then
+        if [ "$MAX_FD" = "maximum" -o "$MAX_FD" = "max" ] ; then
+            MAX_FD="$MAX_FD_LIMIT"
+        fi
+        ulimit -n $MAX_FD
+        if [ $? -ne 0 ] ; then
+            warn "Could not set maximum file descriptor limit: $MAX_FD"
+        fi
+    else
+        warn "Could not query maximum file descriptor limit: $MAX_FD_LIMIT"
+    fi
+fi
+
+# For Darwin, add options to specify how the application appears in the dock
+if $darwin; then
+    GRADLE_OPTS="$GRADLE_OPTS \"-Xdock:name=$APP_NAME\" \"-Xdock:icon=$APP_HOME/media/gradle.icns\""
+fi
+
+# For Cygwin, switch paths to Windows format before running java
+if $cygwin ; then
+    APP_HOME=`cygpath --path --mixed "$APP_HOME"`
+    CLASSPATH=`cygpath --path --mixed "$CLASSPATH"`
+    JAVACMD=`cygpath --unix "$JAVACMD"`
+
+    # We build the pattern for arguments to be converted via cygpath
+    ROOTDIRSRAW=`find -L / -maxdepth 1 -mindepth 1 -type d 2>/dev/null`
+    SEP=""
+    for dir in $ROOTDIRSRAW ; do
+        ROOTDIRS="$ROOTDIRS$SEP$dir"
+        SEP="|"
+    done
+    OURCYGPATTERN="(^($ROOTDIRS))"
+    # Add a user-defined pattern to the cygpath arguments
+    if [ "$GRADLE_CYGPATTERN" != "" ] ; then
+        OURCYGPATTERN="$OURCYGPATTERN|($GRADLE_CYGPATTERN)"
+    fi
+    # Now convert the arguments - kludge to limit ourselves to /bin/sh
+    i=0
+    for arg in "$@" ; do
+        CHECK=`echo "$arg"|egrep -c "$OURCYGPATTERN" -`
+        CHECK2=`echo "$arg"|egrep -c "^-"`                                 ### Determine if an option
+
+        if [ $CHECK -ne 0 ] && [ $CHECK2 -eq 0 ] ; then                    ### Added a condition
+            eval `echo args$i`=`cygpath --path --ignore --mixed "$arg"`
+        else
+            eval `echo args$i`="\"$arg\""
+        fi
+        i=$((i+1))
+    done
+    case $i in
+        (0) set -- ;;
+        (1) set -- "$args0" ;;
+        (2) set -- "$args0" "$args1" ;;
+        (3) set -- "$args0" "$args1" "$args2" ;;
+        (4) set -- "$args0" "$args1" "$args2" "$args3" ;;
+        (5) set -- "$args0" "$args1" "$args2" "$args3" "$args4" ;;
+        (6) set -- "$args0" "$args1" "$args2" "$args3" "$args4" "$args5" ;;
+        (7) set -- "$args0" "$args1" "$args2" "$args3" "$args4" "$args5" "$args6" ;;
+        (8) set -- "$args0" "$args1" "$args2" "$args3" "$args4" "$args5" "$args6" "$args7" ;;
+        (9) set -- "$args0" "$args1" "$args2" "$args3" "$args4" "$args5" "$args6" "$args7" "$args8" ;;
+    esac
+fi
+
+# Escape application args
+save () {
+    for i do printf %s\\n "$i" | sed "s/'/'\\\\''/g;1s/^/'/;\$s/\$/' \\\\/" ; done
+    echo " "
+}
+APP_ARGS=$(save "$@")
+
+# Collect all arguments for the java command, following the shell quoting and substitution rules
+eval set -- $DEFAULT_JVM_OPTS $JAVA_OPTS $GRADLE_OPTS "\"-Dorg.gradle.appname=$APP_BASE_NAME\"" -classpath "\"$CLASSPATH\"" org.gradle.wrapper.GradleWrapperMain "$APP_ARGS"
+
+# by default we should be in the correct project dir, but when run from Finder on Mac, the cwd is wrong
+if [ "$(uname)" = "Darwin" ] && [ "$HOME" = "$PWD" ]; then
+  cd "$(dirname "$0")"
+fi
+
+exec "$JAVACMD" "$@"
+@@ -0,0 +1,84 @@
+@if "%DEBUG%" == "" @echo off
+@rem ##########################################################################
+@rem
+@rem  Gradle startup script for Windows
+@rem
+@rem ##########################################################################
+
+@rem Set local scope for the variables with windows NT shell
+if "%OS%"=="Windows_NT" setlocal
+
+set DIRNAME=%~dp0
+if "%DIRNAME%" == "" set DIRNAME=.
+set APP_BASE_NAME=%~n0
+set APP_HOME=%DIRNAME%
+
+@rem Add default JVM options here. You can also use JAVA_OPTS and GRADLE_OPTS to pass JVM options to this script.
+set DEFAULT_JVM_OPTS=
+
+@rem Find java.exe
+if defined JAVA_HOME goto findJavaFromJavaHome
+
+set JAVA_EXE=java.exe
+%JAVA_EXE% -version >NUL 2>&1
+if "%ERRORLEVEL%" == "0" goto init
+
+echo.
+echo ERROR: JAVA_HOME is not set and no 'java' command could be found in your PATH.
+echo.
+echo Please set the JAVA_HOME variable in your environment to match the
+echo location of your Java installation.
+
+goto fail
+
+:findJavaFromJavaHome
+set JAVA_HOME=%JAVA_HOME:"=%
+set JAVA_EXE=%JAVA_HOME%/bin/java.exe
+
+if exist "%JAVA_EXE%" goto init
+
+echo.
+echo ERROR: JAVA_HOME is set to an invalid directory: %JAVA_HOME%
+echo.
+echo Please set the JAVA_HOME variable in your environment to match the
+echo location of your Java installation.
+
+goto fail
+
+:init
+@rem Get command-line arguments, handling Windows variants
+
+if not "%OS%" == "Windows_NT" goto win9xME_args
+
+:win9xME_args
+@rem Slurp the command line arguments.
+set CMD_LINE_ARGS=
+set _SKIP=2
+
+:win9xME_args_slurp
+if "x%~1" == "x" goto execute
+
+set CMD_LINE_ARGS=%*
+
+:execute
+@rem Setup the command line
+
+set CLASSPATH=%APP_HOME%\gradle\wrapper\gradle-wrapper.jar
+
+@rem Execute Gradle
+"%JAVA_EXE%" %DEFAULT_JVM_OPTS% %JAVA_OPTS% %GRADLE_OPTS% "-Dorg.gradle.appname=%APP_BASE_NAME%" -classpath "%CLASSPATH%" org.gradle.wrapper.GradleWrapperMain %CMD_LINE_ARGS%
+
+:end
+@rem End local scope for the variables with windows NT shell
+if "%ERRORLEVEL%"=="0" goto mainEnd
+
+:fail
+rem Set variable GRADLE_EXIT_CONSOLE if you need the _script_ return code instead of
+rem the _cmd.exe /c_ return code!
+if  not "" == "%GRADLE_EXIT_CONSOLE%" exit 1
+exit /b 1
+
+:mainEnd
+if "%OS%"=="Windows_NT" endlocal
+
+:omega
+@@ -0,0 +1,2 @@
+include ':app'
+rootProject.name='GroceryList'
